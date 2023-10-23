@@ -34,6 +34,7 @@
 
 #include <boost/variant.hpp>
 
+#include <nil/crypto3/detail/type_traits.hpp>
 #include <nil/crypto3/container/merkle/tree.hpp>
 
 namespace nil {
@@ -52,8 +53,9 @@ namespace nil {
         }    // namespace marshalling
         namespace containers {
             namespace detail {
-                template<typename NodeType, std::size_t Arity = 2>
-                struct merkle_proof_impl {
+                template<typename NodeType, std::size_t Arity = 2, typename Enable = void>
+                class merkle_proof_impl {
+                public:
                     typedef NodeType node_type;
                     typedef typename node_type::hash_type hash_type;
 
@@ -125,8 +127,11 @@ namespace nil {
                         }
                     }
 
-                    template<typename Hashable>
-                    bool validate(const Hashable &a) const {
+                    // Specilized implementaions below.
+                    template<typename Hashable, typename HashType = typename NodeType::hash_type>
+                    typename std::enable_if_t<!crypto3::detail::is_poseidon<HashType>::value,
+                    bool> validate(const Hashable &a) const {
+                        using hash_type = typename NodeType::hash_type;
                         value_type d = crypto3::hash<hash_type>(a);
                         for (auto &it : _path) {
                             accumulator_set<hash_type> acc;
@@ -139,6 +144,35 @@ namespace nil {
                                 crypto3::hash<hash_type>(it[i]._hash.begin(), it[i]._hash.end(), acc);
                             }
                             d = accumulators::extract::hash<hash_type>(acc);
+                        }
+                        return (d == _root);
+                    }
+
+                    // Specialize for poseidon.
+                    template<typename Hashable, typename HashType = typename NodeType::hash_type>
+                    typename std::enable_if_t<crypto3::detail::is_poseidon<HashType>::value, bool> 
+                        validate(const Hashable &a) const {
+
+                        typedef NodeType node_type;
+                        typedef typename node_type::hash_type hash_type;
+
+                        constexpr static const std::size_t arity = Arity;
+
+                        constexpr static const std::size_t value_bits = node_type::value_bits;
+                        typedef typename node_type::value_type value_type;
+
+                        value_type d = crypto3::hash<hash_type>(a);
+                        for (auto &it : _path) {
+                            std::vector<typename hash_type::digest_type> values;
+                            size_t i = 0;
+                            for (; (i < arity - 1) && i == it[i]._position; ++i) {
+                                values.push_back(it[i]._hash);
+                            }
+                            values.push_back(d);
+                            for (; i < arity - 1; ++i) {
+                                values.push_back(it[i]._hash);
+                            }
+                            d = hash<hash_type>(values);
                         }
                         return (d == _root);
                     }
@@ -285,6 +319,8 @@ namespace nil {
                     template<typename, typename>
                     friend class nil::crypto3::marshalling::types::merkle_proof_marshalling;
                 };
+
+
             }    // namespace detail
 
             template<typename T, std::size_t Arity>

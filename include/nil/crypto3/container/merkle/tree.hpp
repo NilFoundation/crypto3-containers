@@ -34,6 +34,9 @@
 #include <nil/crypto3/detail/type_traits.hpp>
 
 #include <nil/crypto3/hash/algorithm/hash.hpp>
+#include <nil/crypto3/hash/poseidon.hpp>
+#include <nil/crypto3/hash/detail/poseidon/poseidon_sponge.hpp>
+#include <nil/crypto3/hash/detail/poseidon/poseidon_policy.hpp>
 #include <nil/crypto3/container/merkle/node.hpp>
 
 namespace nil {
@@ -466,13 +469,26 @@ namespace nil {
                     size_t _rc;
                 };
 
-                template<typename T, typename LeafIterator>
+                template<typename T, typename LeafIterator, 
+                    std::enable_if_t<!crypto3::detail::is_poseidon<T>::value, bool> = true>
                 typename T::digest_type generate_hash(LeafIterator first, LeafIterator last) {
                     accumulator_set<T> acc;
                     while (first != last) {
                         crypto3::hash<T>(*first++, acc);
                     }
                     return accumulators::extract::hash<T>(acc);
+                }
+
+                template<typename T, typename LeafIterator, 
+                    std::enable_if_t<crypto3::detail::is_poseidon<T>::value, bool> = true>
+                typename T::digest_type generate_hash(LeafIterator first, LeafIterator last) {
+
+                    hashes::detail::poseidon_sponge_construction<typename T::policy_type> sponge;
+
+                    while (first != last) {
+                        sponge.absorb(*first++);
+                    }
+                    return sponge.squeeze();
                 }
 
                 template<typename T, std::size_t Arity, typename LeafIterator>
