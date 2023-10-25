@@ -33,6 +33,7 @@
 #include <nil/crypto3/detail/static_digest.hpp>
 #include <nil/crypto3/detail/type_traits.hpp>
 
+#include <nil/crypto3/hash/type_traits.hpp>
 #include <nil/crypto3/hash/algorithm/hash.hpp>
 #include <nil/crypto3/hash/poseidon.hpp>
 #include <nil/crypto3/hash/detail/poseidon/poseidon_sponge.hpp>
@@ -470,7 +471,7 @@ namespace nil {
                 };
 
                 template<typename T, typename LeafIterator, 
-                    std::enable_if_t<!crypto3::detail::is_poseidon<T>::value, bool> = true>
+                    std::enable_if_t<!crypto3::hashes::is_poseidon<T>::value, bool> = true>
                 typename T::digest_type generate_hash(LeafIterator first, LeafIterator last) {
                     accumulator_set<T> acc;
                     while (first != last) {
@@ -480,7 +481,7 @@ namespace nil {
                 }
 
                 template<typename T, typename LeafIterator, 
-                    std::enable_if_t<crypto3::detail::is_poseidon<T>::value, bool> = true>
+                    std::enable_if_t<crypto3::hashes::is_poseidon<T>::value, bool> = true>
                 typename T::digest_type generate_hash(LeafIterator first, LeafIterator last) {
 
                     hashes::detail::poseidon_sponge_construction<typename T::policy_type> sponge;

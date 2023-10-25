@@ -34,7 +34,7 @@
 
 #include <boost/variant.hpp>
 
-#include <nil/crypto3/detail/type_traits.hpp>
+#include <nil/crypto3/hash/type_traits.hpp>
 #include <nil/crypto3/container/merkle/tree.hpp>
 
 namespace nil {
@@ -129,7 +129,7 @@ namespace nil {
 
                     // Specilized implementaions below.
                     template<typename Hashable, typename HashType = typename NodeType::hash_type>
-                    typename std::enable_if_t<!crypto3::detail::is_poseidon<HashType>::value,
+                    typename std::enable_if_t<!crypto3::hashes::is_poseidon<HashType>::value,
                     bool> validate(const Hashable &a) const {
                         using hash_type = typename NodeType::hash_type;
                         value_type d = crypto3::hash<hash_type>(a);
@@ -150,7 +150,7 @@ namespace nil {
 
                     // Specialize for poseidon.
                     template<typename Hashable, typename HashType = typename NodeType::hash_type>
-                    typename std::enable_if_t<crypto3::detail::is_poseidon<HashType>::value, bool> 
+                    typename std::enable_if_t<crypto3::hashes::is_poseidon<HashType>::value, bool> 
                         validate(const Hashable &a) const {
 
                         typedef NodeType node_type;
