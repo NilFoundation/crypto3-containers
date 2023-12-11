@@ -150,8 +150,9 @@ namespace nil {
 
                     // Specialize for poseidon.
                     template<typename Hashable, typename HashType = typename NodeType::hash_type>
-                    typename std::enable_if_t<crypto3::hashes::is_poseidon<HashType>::value, bool> 
+                    typename std::enable_if_t<crypto3::hashes::is_poseidon<HashType>::value, bool>
                         validate(const Hashable &a) const {
+                        BOOST_ASSERT_MSG(Arity == 2, "Poseidon is only supported for arity 2");
 
                         typedef NodeType node_type;
                         typedef typename node_type::hash_type hash_type;
@@ -161,7 +162,7 @@ namespace nil {
                         constexpr static const std::size_t value_bits = node_type::value_bits;
                         typedef typename node_type::value_type value_type;
 
-                        value_type d = crypto3::hash<hash_type>(a);
+                        value_type d = generate_poseidon_leaf_hash<hash_type>(a);// crypto3::hash<hash_type>(a);
                         for (auto &it : _path) {
                             std::vector<typename hash_type::digest_type> values;
                             size_t i = 0;
@@ -172,13 +173,13 @@ namespace nil {
                             for (; i < arity - 1; ++i) {
                                 values.push_back(it[i]._hash);
                             }
-                            d = hash<hash_type>(values);
+                            d = generate_poseidon_hash<hash_type>(values[0], values[1]);
                         }
                         return (d == _root);
                     }
 
-                    static std::vector<merkle_proof_impl> 
-                        generate_compressed_proofs(const containers::merkle_tree<NodeType, Arity> &tree, 
+                    static std::vector<merkle_proof_impl>
+                        generate_compressed_proofs(const containers::merkle_tree<NodeType, Arity> &tree,
                                                     std::vector<std::size_t> leaf_idxs) {
                         assert(leaf_idxs.size() > 0);
                         std::vector<std::size_t> sorted_idx(leaf_idxs.size());
@@ -328,7 +329,7 @@ namespace nil {
                 typename std::conditional<nil::crypto3::detail::is_hash<T>::value,
                                           detail::merkle_proof_impl<detail::merkle_tree_node<T>, Arity>,
                                           detail::merkle_proof_impl<T, Arity>>::type;
-            
+
         }    // namespace containers
     }        // namespace crypto3
 }    // namespace nil
