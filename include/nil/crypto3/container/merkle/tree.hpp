@@ -30,6 +30,8 @@
 #include <vector>
 #include <cmath>
 
+#include <nil/crypto3/algebra/curves/pallas.hpp>
+
 #include <nil/crypto3/detail/static_digest.hpp>
 #include <nil/crypto3/detail/type_traits.hpp>
 
