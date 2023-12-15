@@ -517,7 +517,6 @@ namespace nil {
                     if (cur == 2) {
                         BOOST_ASSERT("Data size should be multiple of 32 bytes");
                     }
-std::cout << "Result is " << sponge.squeeze() << std::endl;
                     return sponge.squeeze();
                 }
 
