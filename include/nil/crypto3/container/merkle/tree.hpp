@@ -485,12 +485,9 @@ namespace nil {
                 typename T::digest_type generate_poseidon_hash(typename T::digest_type first, typename T::digest_type second) {
                     using field_type = nil::crypto3::algebra::curves::pallas::base_field_type;
                     using poseidon_policy = nil::crypto3::hashes::detail::mina_poseidon_policy<field_type>;
-                    using permutation_type = nil::crypto3::hashes::detail::poseidon_permutation<poseidon_policy>;
-                    using state_type = typename permutation_type::state_type;
-
-                    state_type poseidon_state = {0,first,second};
-                    permutation_type::permute(poseidon_state);
-                    return poseidon_state[2];
+                    hashes::detail::poseidon_sponge_construction<poseidon_policy> sponge;
+                    sponge.absorb({0, first, second});
+                    return sponge.squeeze();
                 }
 
                 template<typename T, typename LeafData = std::vector<std::uint8_t>,
@@ -498,34 +495,30 @@ namespace nil {
                 typename T::digest_type generate_poseidon_leaf_hash(const LeafData &leaf) {
                     using field_type = nil::crypto3::algebra::curves::pallas::base_field_type;
                     using poseidon_policy = nil::crypto3::hashes::detail::mina_poseidon_policy<field_type>;
-                    using permutation_type = nil::crypto3::hashes::detail::poseidon_permutation<poseidon_policy>;
-                    using state_type = typename permutation_type::state_type;
 
-                    state_type poseidon_state = {0,0,0};
+                    hashes::detail::poseidon_sponge_construction<poseidon_policy> sponge;
+                    sponge.absorb(0);
                     std::size_t cur = 1;
-                    for(std::size_t i = 0; i < leaf.size(); i+=64){
-                        nil::crypto3::multiprecision::cpp_int tmp1 = 0;
+                    for(std::size_t i = 0; i < leaf.size(); i+=64) {
+                        nil::crypto3::multiprecision::cpp_int first = 0;
                         std::size_t j = 0;
                         for(; j < 32; j++){
-                            tmp1 <<= 8;
-                            tmp1 += leaf[i + j];
+                            first <<= 8;
+                            first += leaf[i + j];
                         }
-                        nil::crypto3::multiprecision::cpp_int tmp2 = 0;
+                        nil::crypto3::multiprecision::cpp_int second = 0;
                         for(; j < 64; j++){
-                            tmp2 <<= 8;
-                            tmp2 += leaf[i + j];
+                            second <<= 8;
+                            second += leaf[i + j];
                         }
-                        poseidon_state[1] = tmp1;
-                        poseidon_state[2] = tmp2;
-                        permutation_type::permute(poseidon_state);
-                        poseidon_state[0] = poseidon_state[2];
-                        poseidon_state[1] = 0;
-                        poseidon_state[2] = 0;
+                        sponge.absorb(first);
+                        sponge.absorb(second);
                     }
-                    if(cur == 2){
+                    if (cur == 2) {
                         BOOST_ASSERT("Data size should be multiple of 32 bytes");
                     }
-                    return poseidon_state[0];
+std::cout << "Result is " << sponge.squeeze() << std::endl;
+                    return sponge.squeeze();
                 }
 
                 template<typename T,
